@@ -6,10 +6,17 @@ import { getRandomInterviewCover } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
-    const { type, role, level, techstack, amount, userid } =
-      await request.json();
+    // Log the incoming request for debugging
+    const requestData = await request.json();
+    console.log("Received request data:", requestData);
 
-    console.log("Received interview generation request:", {
+    // Extract data from the request
+    // This handles both direct API calls and VAPI function calls which may nest parameters
+    const data = requestData.functionCall?.parameters || requestData;
+
+    const { type, role, level, techstack, amount, userid } = data;
+
+    console.log("Extracted interview parameters:", {
       type,
       role,
       level,
@@ -86,14 +93,15 @@ export async function POST(request: Request) {
         const docRef = await db.collection("interviews").add(interview);
         console.log("Interview saved with ID:", docRef.id);
 
-        return Response.json(
-          {
-            success: true,
-            interviewId: docRef.id,
-            message: "Interview questions generated and saved successfully",
-          },
-          { status: 200 }
-        );
+        // Format response for both direct API calls and VAPI function calls
+        const responseData = {
+          success: true,
+          interviewId: docRef.id,
+          message: "Interview questions generated and saved successfully",
+          questions: parsedQuestions,
+        };
+
+        return Response.json(responseData, { status: 200 });
       } catch (dbError) {
         console.error("Firebase DB error:", dbError);
         // Return the questions even if saving to DB fails
