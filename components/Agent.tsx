@@ -118,12 +118,30 @@ const Agent = ({
     setCallStatus(CallStatus.CONNECTING);
 
     if (type === "generate") {
-      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
-        variableValues: {
-          username: userName,
-          userid: userId,
-        },
-      });
+      try {
+        // Use the assistant ID from environment variables
+        const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
+
+        if (!assistantId) {
+          console.error("Missing VAPI assistant ID in environment variables");
+          setCallStatus(CallStatus.INACTIVE);
+          alert(
+            "VAPI assistant ID is not configured. Please check your environment variables."
+          );
+          return;
+        }
+
+        await vapi.start(assistantId, {
+          variableValues: {
+            username: userName,
+            userid: userId,
+          },
+        });
+      } catch (error) {
+        console.error("Error starting VAPI call:", error);
+        setCallStatus(CallStatus.INACTIVE);
+        alert("Failed to start the interview. Please try again.");
+      }
     } else {
       let formattedQuestions = "";
       if (questions) {
@@ -132,11 +150,19 @@ const Agent = ({
           .join("\n");
       }
 
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
-      });
+      try {
+        await vapi.start(interviewer, {
+          variableValues: {
+            questions: formattedQuestions,
+          },
+        });
+      } catch (error) {
+        console.error("Error starting interviewer:", error);
+        setCallStatus(CallStatus.INACTIVE);
+        alert(
+          "Failed to start the interview. Please check your connection and try again."
+        );
+      }
     }
   };
 
